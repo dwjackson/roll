@@ -187,7 +187,6 @@ mod tests {
         let mut rng = rand::thread_rng();
         let results = roll.roll(&mut rng);
         assert_eq!(results.len(), 3);
-        // TODO
     }
 
     #[test]
