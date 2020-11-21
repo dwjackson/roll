@@ -13,7 +13,7 @@ impl DiceBag {
         }
     }
 
-    pub fn roll(&mut self, roll: &Roll) -> Vec<u32> {
+    pub fn roll(&mut self, roll: &Roll) -> Vec<i32> {
         roll.roll(&mut self.rng)
     }
 }
@@ -27,13 +27,16 @@ impl Default for DiceBag {
 pub struct Roll {
     dice_count: u32,
     sides: u32,
+    values: Vec<i32>,
 }
 
 impl Roll {
-    pub fn roll<T: Rng>(&self, rng: &mut T) -> Vec<u32> {
+    pub fn roll<T: Rng>(&self, rng: &mut T) -> Vec<i32> {
         let mut results = Vec::new();
         for _ in 0..self.dice_count {
-            results.push(rng.gen_range(1, self.sides + 1));
+            let index = rng.gen_range(0, self.sides) as usize;
+            let result = self.values[index];
+            results.push(result);
         }
         results
     }
@@ -57,11 +60,24 @@ impl FromStr for Roll {
                 if sides < 2 || sides == 3 {
                     return Err(ParseRollError::ImpossibleDie(sides));
                 }
-                Ok(Roll { dice_count, sides })
+                let roll = Roll {
+                    dice_count,
+                    sides,
+                    values: normal_die(sides),
+                };
+                Ok(roll)
             }
             None => Err(ParseRollError::InvalidRoll),
         }
     }
+}
+
+fn normal_die(sides: u32) -> Vec<i32> {
+    let mut values = Vec::new();
+    for i in 1..(sides + 1) {
+        values.push(i as i32);
+    }
+    values
 }
 
 pub fn parse_rolls(s: &str) -> Result<Vec<Roll>, ParseRollError> {
@@ -91,6 +107,7 @@ mod tests {
         let results = bag.roll(&Roll {
             dice_count: 2,
             sides: 8,
+            values: vec![1, 2, 3, 4, 5, 6, 7, 8],
         });
         for i in 0..2 {
             let n = results[i];
@@ -104,6 +121,10 @@ mod tests {
         let roll: Roll = s.parse().expect("Bad parse");
         assert_eq!(roll.dice_count, 3);
         assert_eq!(roll.sides, 6);
+        let mut rng = rand::thread_rng();
+        let results = roll.roll(&mut rng);
+        assert_eq!(results.len(), 3);
+        // TODO
     }
 
     #[test]
@@ -129,5 +150,14 @@ mod tests {
             Ok(_) => panic!("Impossible shape"),
             Err(_) => (),
         }
+    }
+
+    #[test]
+    #[ignore]
+    fn test_parse_custom() {
+        let s = "1d{1,1,0,0,-1,-1}";
+        let roll: Roll = s.parse().expect("Bad parse");
+        assert_eq!(roll.sides, 6);
+        assert_eq!(roll.values, vec![1, 1, 0, 0, -1, -1]);
     }
 }
