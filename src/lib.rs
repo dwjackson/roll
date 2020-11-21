@@ -1,4 +1,6 @@
 use rand::prelude::*;
+use std::str::FromStr;
+use regex::Regex;
 
 struct DiceBag {
     rng: ThreadRng,
@@ -31,6 +33,49 @@ impl Roll {
     }
 }
 
+impl FromStr for Roll {
+    type Err = ParseRollError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let re = Regex::new(r"(\d+)d(\d+)").unwrap();
+        match re.captures(s) {
+            Some(c) => {
+                let dice_count = match c[1].parse() {
+                    Ok(n) => n,
+                    Err(_) => return Err(ParseRollError::InvalidDiceCount),
+                };
+                let sides = match c[2].parse() {
+                    Ok(n) => n,
+                    Err(_) => return Err(ParseRollError::InvalidSides),
+                };
+                Ok(Roll{
+                    dice_count,
+                    sides,
+                })
+            },
+            None => {
+                Err(ParseRollError::InvalidRoll)
+            }
+        }
+    }
+}
+
+fn parse_rolls(s: &str) -> Result<Vec<Roll>, ParseRollError> {
+    let mut rolls = Vec::new();
+    for roll_str in s.split_whitespace() {
+        let roll = roll_str.parse()?;
+        rolls.push(roll);
+    }
+    Ok(rolls)
+}
+
+#[derive(Debug)]
+enum ParseRollError {
+    InvalidRoll,
+    InvalidDiceCount,
+    InvalidSides,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -43,5 +88,20 @@ mod tests {
             let n = results[i];
             assert!(n >= 1 && n <= 8);
         }
+    }
+
+    #[test]
+    fn test_parse_roll() {
+        let s = "3d6";
+        let roll: Roll = s.parse().expect("Bad parse");
+        assert_eq!(roll.dice_count, 3);
+        assert_eq!(roll.sides, 6);
+    }
+
+    #[test]
+    fn test_parse_multiple_roles() {
+        let s = "3d6 2d8 1d20";
+        let rolls = parse_rolls(s).expect("Bad parse");
+        assert_eq!(rolls.len(), 3);
     }
 }
