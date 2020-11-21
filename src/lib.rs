@@ -1,9 +1,5 @@
 use rand::prelude::*;
 
-fn roll<T : Rng>(sides: u32, rng: &mut T) -> u32 {
-    rng.gen_range(1, sides + 1)
-}
-
 struct DiceBag {
     rng: ThreadRng,
 }
@@ -15,8 +11,23 @@ impl DiceBag {
         }
     }
 
-    fn roll(&mut self, sides: u32) -> u32 {
-        roll(sides, &mut self.rng)
+    fn roll(&mut self, roll: &Roll) -> Vec<u32> {
+        roll.roll(&mut self.rng)
+    }
+}
+
+struct Roll {
+    dice_count: u32,
+    sides: u32,
+}
+
+impl Roll {
+    fn roll<T : Rng>(&self, rng: &mut T) -> Vec<u32> {
+        let mut results = Vec::new();
+        for i in 0..self.dice_count {
+            results.push(rng.gen_range(1, self.sides + 1));
+        }
+        results
     }
 }
 
@@ -25,16 +36,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_roll_6_sided_die() {
-        let mut rng = rand::thread_rng();
-        let n = roll(6, &mut rng);
-        assert!(n >= 1 && n <= 6);
-    }
-
-    #[test]
-    fn test_dice_bag() {
+    fn test_roll() {
         let mut bag = DiceBag::new();
-        let n = bag.roll(8);
-        assert!(n >= 1 && n <= 8);
+        let results = bag.roll(&Roll { dice_count: 2, sides: 8 });
+        for i in 0..2 {
+            let n = results[i];
+            assert!(n >= 1 && n <= 8);
+        }
     }
 }
