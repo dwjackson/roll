@@ -54,6 +54,9 @@ impl FromStr for Roll {
                     Ok(n) => n,
                     Err(_) => return Err(ParseRollError::InvalidSides),
                 };
+                if sides < 2 || sides == 3 {
+                    return Err(ParseRollError::ImpossibleDie(sides));
+                }
                 Ok(Roll { dice_count, sides })
             }
             None => Err(ParseRollError::InvalidRoll),
@@ -75,6 +78,7 @@ pub enum ParseRollError {
     InvalidRoll,
     InvalidDiceCount,
     InvalidSides,
+    ImpossibleDie(u32),
 }
 
 #[cfg(test)]
@@ -107,5 +111,23 @@ mod tests {
         let s = "3d6 2d8 1d20";
         let rolls = parse_rolls(s).expect("Bad parse");
         assert_eq!(rolls.len(), 3);
+    }
+
+    #[test]
+    fn test_impossible_dice_shape_1_side() {
+        let s = "2d1";
+        match s.parse::<Roll>() {
+            Ok(_) => panic!("Impossible shape"),
+            Err(_) => (),
+        }
+    }
+
+    #[test]
+    fn test_impossible_dice_shape_3_sides() {
+        let s = "3d3";
+        match s.parse::<Roll>() {
+            Ok(_) => panic!("Impossible shape"),
+            Err(_) => (),
+        }
     }
 }

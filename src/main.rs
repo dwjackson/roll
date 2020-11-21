@@ -20,5 +20,7 @@ fn main() {
             }
         }
     }
-    println!("Total: {}", total);
+    if total > 0 {
+        println!("Total: {}", total);
+    }
 }
