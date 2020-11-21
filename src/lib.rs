@@ -143,7 +143,7 @@ fn parse_value(chars: &mut std::str::Chars) -> Result<Option<i32>, ParseRollErro
 }
 
 fn skip_whitespace(chars: &mut std::str::Chars) -> Option<char>{
-    while let Some(c) = chars.next() {
+    for c in chars {
         if !c.is_whitespace() {
             return Some(c);
         }
