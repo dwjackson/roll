@@ -46,29 +46,39 @@ impl FromStr for Roll {
     type Err = ParseRollError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let re = Regex::new(r"(\d+)d(\d+)").unwrap();
+        let re = Regex::new(r"(\d+)d(.+)").unwrap();
         match re.captures(s) {
             Some(c) => {
                 let dice_count = match c[1].parse() {
                     Ok(n) => n,
                     Err(_) => return Err(ParseRollError::InvalidDiceCount),
                 };
-                let sides = match c[2].parse() {
-                    Ok(n) => n,
-                    Err(_) => return Err(ParseRollError::InvalidSides),
-                };
+                let (sides, values) = parse_sides(&c[2])?;
                 if sides < 2 || sides == 3 {
                     return Err(ParseRollError::ImpossibleDie(sides));
                 }
                 let roll = Roll {
                     dice_count,
                     sides,
-                    values: normal_die(sides),
+                    values,
                 };
                 Ok(roll)
             }
             None => Err(ParseRollError::InvalidRoll),
         }
+    }
+}
+
+fn parse_sides(s: &str) -> Result<(u32, Vec<i32>), ParseRollError> {
+    let mut chars = s.chars();
+    let c = chars.next().unwrap();
+    if c != '{' {
+        match s.parse::<i32>() {
+            Ok(n) => Ok((n as u32, normal_die(n as u32))),
+            Err(_) => Err(ParseRollError::InvalidSides),
+        }
+    } else {
+        parse_custom_die(s)
     }
 }
 
@@ -78,6 +88,56 @@ fn normal_die(sides: u32) -> Vec<i32> {
         values.push(i as i32);
     }
     values
+}
+
+fn parse_custom_die(s: &str) -> Result<(u32, Vec<i32>), ParseRollError> {
+    let mut chars = s.chars();
+    let c = chars.next().unwrap();
+    if c != '{' {
+        return Err(ParseRollError::CustomDieSyntaxError);
+    }
+    let values = parse_values(&mut chars)?;
+    Ok((values.len() as u32, values))
+}
+
+fn parse_values(chars: &mut std::str::Chars) -> Result<Vec<i32>, ParseRollError> {
+    let mut values = Vec::new();
+    while let Some(value) = parse_value(chars)? {
+        values.push(value);
+    }
+    Ok(values)
+}
+
+fn parse_value(chars: &mut std::str::Chars) -> Result<Option<i32>, ParseRollError> {
+    let c = chars.next();
+    if c.is_none() {
+        return Ok(None);
+    }
+    let c = c.unwrap();
+    let is_negative = c == '-';
+    let mut digits = String::new();
+    if !is_negative {
+        if c.is_digit(10) {
+            digits.push(c);
+        } else {
+            return Err(ParseRollError::InvalidDigit(c));
+        }
+    }
+    for c in chars {
+        if c.is_digit(10) {
+            digits.push(c);
+        } else if c == ',' || c == '}' {
+            let n = digits.parse::<i32>().unwrap();
+            if is_negative {
+                return Ok(Some(-n));
+            } else {
+                return Ok(Some(n));
+            }
+        } else {
+            return Err(ParseRollError::InvalidDieValue);
+        }
+    }
+    Err(ParseRollError::InvalidDieValue)
 }
 
 pub fn parse_rolls(s: &str) -> Result<Vec<Roll>, ParseRollError> {
@@ -95,6 +155,9 @@ pub enum ParseRollError {
     InvalidDiceCount,
     InvalidSides,
     ImpossibleDie(u32),
+    CustomDieSyntaxError,
+    InvalidDigit(char),
+    InvalidDieValue,
 }
 
 #[cfg(test)]
@@ -153,7 +216,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_parse_custom() {
         let s = "1d{1,1,0,0,-1,-1}";
         let roll: Roll = s.parse().expect("Bad parse");

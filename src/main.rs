@@ -17,10 +17,9 @@ fn main() {
             }
             Err(e) => {
                 println!("Error: {:?}", e);
+                std::process::exit(1);
             }
         }
     }
-    if total > 0 {
-        println!("Total: {}", total);
-    }
+    println!("Total: {}", total);
 }
