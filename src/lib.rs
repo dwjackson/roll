@@ -127,17 +127,19 @@ fn parse_value(chars: &mut std::str::Chars) -> Result<Option<i32>, ParseRollErro
         if c.is_digit(10) {
             digits.push(c);
         } else if c == ',' || c == '}' {
-            let n = digits.parse::<i32>().unwrap();
-            if is_negative {
-                return Ok(Some(-n));
-            } else {
-                return Ok(Some(n));
-            }
+            break;
+        } else if c.is_whitespace() {
+            // Skip trailing whitespace
         } else {
             return Err(ParseRollError::InvalidDieValue);
         }
     }
-    Err(ParseRollError::InvalidDieValue)
+    let n = digits.parse::<i32>().unwrap();
+    if is_negative {
+        Ok(Some(-n))
+    } else {
+        Ok(Some(n))
+    }
 }
 
 fn skip_whitespace(chars: &mut std::str::Chars) -> Option<char>{
@@ -232,8 +234,16 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_custom_with_preceding_space() {
+    fn test_parse_custom_with_preceding_whitespace() {
         let s = "1d{ 1,\t1, \t0,\t \t0,\t -1,   -1}";
+        let roll: Roll = s.parse().expect("Bad parse");
+        assert_eq!(roll.sides, 6);
+        assert_eq!(roll.values, vec![1, 1, 0, 0, -1, -1]);
+    }
+
+    #[test]
+    fn test_parse_custom_with_preceding_and_trailing_whitespace() {
+        let s = "1d{ 1 ,\t1\t, \t0 \t,\t \t0\t \t,\t -1\t ,   -1   }";
         let roll: Roll = s.parse().expect("Bad parse");
         assert_eq!(roll.sides, 6);
         assert_eq!(roll.values, vec![1, 1, 0, 0, -1, -1]);
