@@ -17,10 +17,17 @@ $ roll 2d6 3d8
 will roll two six-sided dice and three eight-sided dice. Roll will print
 results one per line and then a "total" line at the end.
 
+### Fudge Dice
+
 A "fudge-die" (2 sides with a "+", 2 sides with a "-", and 2 blank sides) can
 be rolled as a `dF` or `df`.
 
-## Custom Dice
+### Percentile Dice
+
+To roll percentile dice, use the notation `d%`. Percentile dice will give a
+result between 1 and 100, like a d100.
+
+### Custom Dice
 
 To roll a custom die, the "shape" of the die must be given and the result
 must be a number. For example, to roll a Fate-Core-style die without using the

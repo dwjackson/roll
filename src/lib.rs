@@ -76,6 +76,8 @@ fn parse_sides(s: &str) -> Result<(u32, Vec<i32>), ParseRollError> {
         parse_custom_die(s)
     } else if c == 'F' || c == 'f' {
         Ok((6, vec![1,1,0,0,-1,-1]))
+    } else if c == '%' {
+        Ok((100, (1..101).collect()))
     } else {
         match s.parse::<i32>() {
             Ok(n) => Ok((n as u32, normal_die(n as u32))),
@@ -258,5 +260,16 @@ mod tests {
         assert_eq!(roll.dice_count, 2);
         assert_eq!(roll.sides, 6);
         assert_eq!(roll.values, vec![1, 1, 0, 0, -1, -1]);
+    }
+
+    #[test]
+    fn test_percentile_dice() {
+        let s = "1d%";
+        let roll: Roll = s.parse().expect("Bad parse");
+        assert_eq!(roll.dice_count, 1);
+        assert_eq!(roll.sides, 100);
+        let values: Vec<i32> = (1..101).collect();
+        assert_eq!(roll.values, values);
+        assert_eq!(roll.values.len(), 100);
     }
 }
