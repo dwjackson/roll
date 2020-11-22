@@ -72,13 +72,15 @@ impl FromStr for Roll {
 fn parse_sides(s: &str) -> Result<(u32, Vec<i32>), ParseRollError> {
     let mut chars = s.chars();
     let c = chars.next().unwrap();
-    if c != '{' {
+    if c == '{' {
+        parse_custom_die(s)
+    } else if c == 'F' || c == 'f' {
+        Ok((6, vec![1,1,0,0,-1,-1]))
+    } else {
         match s.parse::<i32>() {
             Ok(n) => Ok((n as u32, normal_die(n as u32))),
             Err(_) => Err(ParseRollError::InvalidSides),
         }
-    } else {
-        parse_custom_die(s)
     }
 }
 
@@ -245,6 +247,15 @@ mod tests {
     fn test_parse_custom_with_preceding_and_trailing_whitespace() {
         let s = "1d{ 1 ,\t1\t, \t0 \t,\t \t0\t \t,\t -1\t ,   -1   }";
         let roll: Roll = s.parse().expect("Bad parse");
+        assert_eq!(roll.sides, 6);
+        assert_eq!(roll.values, vec![1, 1, 0, 0, -1, -1]);
+    }
+
+    #[test]
+    fn test_fudge_dice() {
+        let s = "2dF";
+        let roll: Roll = s.parse().expect("Bad parse");
+        assert_eq!(roll.dice_count, 2);
         assert_eq!(roll.sides, 6);
         assert_eq!(roll.values, vec![1, 1, 0, 0, -1, -1]);
     }
