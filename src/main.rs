@@ -6,6 +6,11 @@ fn main() {
     if args.len() < 2 {
         println!("USAGE: roll [DICE...]");
         println!("e.g. roll 3d6");
+        println!();
+        println!("Available Dice:");
+        println!("\tdN (where N is a number) - N sided die");
+        println!("\tdF - Fude dice: +, +, -, -, _, _");
+        println!("\td% - A number between 1 and 100");
         std::process::exit(1);
     }
     let mut dice = DiceBag::new();
