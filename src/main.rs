@@ -21,15 +21,15 @@ fn main() {
                 for roll in rolls.iter() {
                     for result in dice.roll(roll).iter() {
                         total += result;
-                        println!("{}", result);
+                        println!("{result}");
                     }
                 }
             }
             Err(e) => {
-                println!("Error: {:?}", e);
+                println!("Error: {e:?}");
                 std::process::exit(1);
             }
         }
     }
-    println!("Total: {}", total);
+    println!("Total: {total}");
 }

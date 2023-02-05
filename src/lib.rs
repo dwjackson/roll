@@ -46,13 +46,15 @@ impl FromStr for Roll {
     type Err = ParseRollError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let re = Regex::new(r"(\d+)d(.+)").unwrap();
+        let re = Regex::new(r"(\d+)?d(.+)").unwrap();
         match re.captures(s) {
             Some(c) => {
-                let dice_count = match c[1].parse() {
-                    Ok(n) => n,
-                    Err(_) => return Err(ParseRollError::InvalidDiceCount),
-                };
+                let dice_count = c.get(1).map_or(1, |m| {
+                    m.as_str().parse().unwrap_or(0)
+                });
+                if dice_count == 0 {
+                    return Err(ParseRollError::InvalidDiceCount);
+                }
                 let (sides, values) = parse_sides(&c[2])?;
                 if sides < 2 || sides == 3 {
                     return Err(ParseRollError::ImpossibleDie(sides));
@@ -121,14 +123,14 @@ fn parse_value(chars: &mut std::str::Chars) -> Result<Option<i32>, ParseRollErro
     let is_negative = c == '-';
     let mut digits = String::new();
     if !is_negative {
-        if c.is_digit(10) {
+        if c.is_ascii_digit() {
             digits.push(c);
         } else {
             return Err(ParseRollError::InvalidDigit(c));
         }
     }
     for c in chars {
-        if c.is_digit(10) {
+        if c.is_ascii_digit() {
             digits.push(c);
         } else if c == ',' || c == '}' {
             break;
@@ -147,12 +149,7 @@ fn parse_value(chars: &mut std::str::Chars) -> Result<Option<i32>, ParseRollErro
 }
 
 fn skip_whitespace(chars: &mut std::str::Chars) -> Option<char>{
-    for c in chars {
-        if !c.is_whitespace() {
-            return Some(c);
-        }
-    }
-    None
+    chars.find(|&c| !c.is_whitespace())
 }
 
 pub fn parse_rolls(s: &str) -> Result<Vec<Roll>, ParseRollError> {
@@ -271,5 +268,13 @@ mod tests {
         let values: Vec<i32> = (1..101).collect();
         assert_eq!(roll.values, values);
         assert_eq!(roll.values.len(), 100);
+    }
+
+    #[test]
+    fn test_single_die_without_number_of_dice() {
+        let s = "d20";
+        let roll: Roll = s.parse().expect("Bad parse");
+        assert_eq!(roll.dice_count, 1);
+        assert_eq!(roll.sides, 20);
     }
 }
