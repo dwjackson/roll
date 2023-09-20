@@ -1,29 +1,55 @@
 use rand::prelude::*;
 use regex::Regex;
 use std::str::FromStr;
+use std::string::ToString;
 
-pub struct DiceBag {
-    rng: ThreadRng,
+pub struct DiceBag<T>
+where
+    T: Rng,
+{
+    rng: T,
 }
 
-impl DiceBag {
-    pub fn new() -> DiceBag {
-        DiceBag {
-            rng: rand::thread_rng(),
-        }
+impl<T> DiceBag<T>
+where
+    T: Rng,
+{
+    pub fn new(rng: T) -> DiceBag<T> {
+        DiceBag { rng }
     }
 
     pub fn roll(&mut self, roll: &Roll) -> Vec<i32> {
         roll.roll(&mut self.rng)
     }
-}
 
-impl Default for DiceBag {
-    fn default() -> Self {
-        Self::new()
+    pub fn roll_all(&mut self, rolls: &[Roll]) -> RollResults {
+        let mut total = 0;
+        let mut lowest = std::i32::MAX;
+        let mut highest = 0;
+        let mut values: Vec<i32> = Vec::new();
+        for roll in rolls.iter() {
+            let results = self.roll(roll);
+            for &result in results.iter() {
+                if result < lowest {
+                    lowest = result;
+                }
+                if result > highest {
+                    highest = result;
+                }
+                total += result;
+                values.push(result);
+            }
+        }
+        RollResults {
+            total,
+            lowest,
+            highest,
+            values,
+        }
     }
 }
 
+#[derive(Debug)]
 pub struct Roll {
     dice_count: u32,
     sides: u32,
@@ -34,7 +60,7 @@ impl Roll {
     pub fn roll<T: Rng>(&self, rng: &mut T) -> Vec<i32> {
         let mut results = Vec::new();
         for _ in 0..self.dice_count {
-            let index = rng.gen_range(0, self.sides) as usize;
+            let index = rng.gen_range(0..self.sides) as usize;
             let result = self.values[index];
             results.push(result);
         }
@@ -49,9 +75,7 @@ impl FromStr for Roll {
         let re = Regex::new(r"(\d+)?d(.+)").unwrap();
         match re.captures(s) {
             Some(c) => {
-                let dice_count = c.get(1).map_or(1, |m| {
-                    m.as_str().parse().unwrap_or(0)
-                });
+                let dice_count = c.get(1).map_or(1, |m| m.as_str().parse().unwrap_or(0));
                 if dice_count == 0 {
                     return Err(ParseRollError::InvalidDiceCount);
                 }
@@ -71,13 +95,19 @@ impl FromStr for Roll {
     }
 }
 
+impl ToString for Roll {
+    fn to_string(&self) -> String {
+        format!("{}d{}", self.dice_count, self.sides)
+    }
+}
+
 fn parse_sides(s: &str) -> Result<(u32, Vec<i32>), ParseRollError> {
     let mut chars = s.chars();
     let c = chars.next().unwrap();
     if c == '{' {
         parse_custom_die(s)
     } else if c == 'F' || c == 'f' {
-        Ok((6, vec![1,1,0,0,-1,-1]))
+        Ok((6, vec![1, 1, 0, 0, -1, -1]))
     } else if c == '%' {
         Ok((100, (1..101).collect()))
     } else {
@@ -148,7 +178,7 @@ fn parse_value(chars: &mut std::str::Chars) -> Result<Option<i32>, ParseRollErro
     }
 }
 
-fn skip_whitespace(chars: &mut std::str::Chars) -> Option<char>{
+fn skip_whitespace(chars: &mut std::str::Chars) -> Option<char> {
     chars.find(|&c| !c.is_whitespace())
 }
 
@@ -172,13 +202,20 @@ pub enum ParseRollError {
     InvalidDieValue,
 }
 
+pub struct RollResults {
+    pub total: i32,
+    pub lowest: i32,
+    pub highest: i32,
+    pub values: Vec<i32>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_roll() {
-        let mut bag = DiceBag::new();
+        let mut bag = DiceBag::new(thread_rng());
         let results = bag.roll(&Roll {
             dice_count: 2,
             sides: 8,
@@ -276,5 +313,17 @@ mod tests {
         let roll: Roll = s.parse().expect("Bad parse");
         assert_eq!(roll.dice_count, 1);
         assert_eq!(roll.sides, 20);
+    }
+
+    #[test]
+    fn test_summary_of_rolls() {
+        let input = "2d20 1d6";
+        let rng = rand::rngs::mock::StepRng::new(3, 1);
+        let mut dice = DiceBag::new(rng);
+        let rolls = parse_rolls(input).expect("Bad parse");
+        let result = dice.roll_all(&rolls);
+        assert_eq!(result.total, 3);
+        assert_eq!(result.lowest, 1);
+        assert_eq!(result.highest, 1);
     }
 }

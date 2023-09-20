@@ -1,3 +1,4 @@
+use rand::prelude::*;
 use roll::*;
 use std::env;
 
@@ -13,16 +14,27 @@ fn main() {
         println!("\td% - A number between 1 and 100");
         std::process::exit(1);
     }
-    let mut dice = DiceBag::new();
-    let mut total: i32 = 0;
+    let mut dice = DiceBag::new(thread_rng());
     for s in args[1..].iter() {
         match parse_rolls(s.trim()) {
             Ok(rolls) => {
-                for roll in rolls.iter() {
-                    for result in dice.roll(roll).iter() {
-                        total += result;
-                        println!("{result}");
-                    }
+                let results = dice.roll_all(&rolls);
+                let multiple_dice = results.values.len() > 1;
+                if multiple_dice {
+                    let description = rolls
+                        .iter()
+                        .map(|r| r.to_string())
+                        .collect::<Vec<String>>()
+                        .join(" ");
+                    println!("{description}");
+                }
+                for value in results.values.iter() {
+                    println!("{}", value);
+                }
+                if multiple_dice {
+                    println!("Total: {}", results.total);
+                    println!("Lowest: {}", results.lowest);
+                    println!("Highest: {}", results.highest);
                 }
             }
             Err(e) => {
@@ -31,5 +43,4 @@ fn main() {
             }
         }
     }
-    println!("Total: {total}");
 }
