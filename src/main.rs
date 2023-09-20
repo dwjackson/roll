@@ -19,22 +19,26 @@ fn main() {
         match parse_rolls(s.trim()) {
             Ok(rolls) => {
                 let results = dice.roll_all(&rolls);
-                let multiple_dice = results.values.len() > 1;
-                if multiple_dice {
+                if results.values.len() > 1 {
                     let description = rolls
                         .iter()
                         .map(|r| r.to_string())
                         .collect::<Vec<String>>()
                         .join(" ");
-                    println!("{description}");
-                }
-                for value in results.values.iter() {
-                    println!("{}", value);
-                }
-                if multiple_dice {
-                    println!("Total: {}", results.total);
-                    println!("Lowest: {}", results.lowest);
-                    println!("Highest: {}", results.highest);
+                    let values = results
+                        .values
+                        .iter()
+                        .map(|v| v.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", ");
+                    println!(
+                        "{description}: {values} (Total: {}, Highest: {}, Lowest: {})",
+                        results.total, results.highest, results.lowest
+                    );
+                } else {
+                    for value in results.values.iter() {
+                        println!("{}", value);
+                    }
                 }
             }
             Err(e) => {
