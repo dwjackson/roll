@@ -1,7 +1,7 @@
 use rand::prelude::*;
 use regex::Regex;
+use std::fmt;
 use std::str::FromStr;
-use std::string::ToString;
 
 pub struct DiceBag<T>
 where
@@ -95,9 +95,9 @@ impl FromStr for Roll {
     }
 }
 
-impl ToString for Roll {
-    fn to_string(&self) -> String {
-        format!("{}d{}", self.dice_count, self.sides)
+impl fmt::Display for Roll {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}d{}", self.dice_count, self.sides)
     }
 }
 
